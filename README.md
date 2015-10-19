@@ -32,6 +32,10 @@ Run dev server:
 ```
 npm run dev
 ```
+Run profiler:
+```
+DEV_ENTRY='./client/profiler' npm run dev
+```
 Set delay for server replies:
 ```
 SERVER_DELAY_ACTIONS='message' npm run dev # по умолчанию 750 мс

@@ -5,13 +5,13 @@ import HtmlWebpackPlugin from 'html-webpack-plugin';
 const root = __dirname.slice(0, -7);
 console.log('Root folder is', root);
 
-export default {
+export default entry => ({
   debug: true,
   devtool: 'eval',
   entry: [
     'webpack-dev-server/client',
     'webpack/hot/only-dev-server',
-    './client/main',
+    entry || './client/main',
   ],
   output: {
     path: path.join(root, 'build/client'),
@@ -59,5 +59,5 @@ export default {
       SOCKET_PORT: '"3001"',
     }),
   ],
-};
+});
 
