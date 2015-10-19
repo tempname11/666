@@ -1,5 +1,6 @@
 import { connect } from 'react-redux';
-import React, { findDOMNode, Component } from 'react';
+import React, { Component } from 'react';
+import { findDOMNode } from 'react-dom';
 import { sendMessage } from '../../smartActions';
 import { roomInputChange, togglePreview } from '../../actions';
 import './index.scss';

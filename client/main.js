@@ -2,6 +2,7 @@ import 'scss/main.scss';
 import 'babel-core/polyfill';
 
 import React from 'react';
+import ReactDOM from 'react-dom';
 import { Provider } from 'react-redux';
 
 import { readState } from './storage';
@@ -23,14 +24,12 @@ const lastState = readState();
 
 const app = (
   <Provider store={store}>
-    {() =>
-      <ReduxRouter>
-        <Route path="/" component={App}>
-          <Route path="/room/:roomID" component={RoomEntrance}/>
-          <Route path="*" component={NotFound}/>
-        </Route>
-      </ReduxRouter>
-    }
+    <ReduxRouter>
+      <Route path="/" component={App}>
+        <Route path="/room/:roomID" component={RoomEntrance}/>
+        <Route path="*" component={NotFound}/>
+      </Route>
+    </ReduxRouter>
   </Provider>
 );
 
@@ -48,7 +47,7 @@ transport.onLeaveUser(data =>
 transport.onTopRooms(data =>
     store.dispatch(updateTopRooms(data.rooms)));
 
-React.render(app, rootElement);
+ReactDOM.render(app, rootElement);
 
 // dispatch after render. otherwise the router doesn't initialize correctly
 store.dispatch(restoreState(lastState));
