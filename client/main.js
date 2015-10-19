@@ -1,37 +1,18 @@
-import 'scss/main.scss';
-import 'babel-core/polyfill';
-
-import React from 'react';
 import ReactDOM from 'react-dom';
-import { Provider } from 'react-redux';
 
 import { readState } from './storage';
 import createStorePlus from './store';
 import all from './reducers';
-import App from './components/App';
-import RoomEntrance from './components/RoomEntrance';
-import NotFound from './components/Splashes/NotFound';
 import { updateTopRooms, newMessage, newAttachment,
          joinUser, leaveUser } from 'actions';
 import { restoreState } from './smartActions';
 import * as transport from './transport';
-import { ReduxRouter } from 'redux-router';
-import { Route } from 'react-router';
+import rootFromStore from './root';
 
 const store = createStorePlus(all);
-const rootElement = document.getElementById('content');
 const lastState = readState();
-
-const app = (
-  <Provider store={store}>
-    <ReduxRouter>
-      <Route path="/" component={App}>
-        <Route path="/room/:roomID" component={RoomEntrance}/>
-        <Route path="*" component={NotFound}/>
-      </Route>
-    </ReduxRouter>
-  </Provider>
-);
+const root = rootFromStore(store);
+const rootElement = document.getElementById('content');
 
 transport.onMessage(data =>
     store.dispatch(newMessage(data)));
@@ -47,7 +28,7 @@ transport.onLeaveUser(data =>
 transport.onTopRooms(data =>
     store.dispatch(updateTopRooms(data.rooms)));
 
-ReactDOM.render(app, rootElement);
+ReactDOM.render(root, rootElement);
 
 // dispatch after render. otherwise the router doesn't initialize correctly
 store.dispatch(restoreState(lastState));
