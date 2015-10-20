@@ -37,9 +37,16 @@ const vanillaPromise = store => next => action => {
 };
 
 const middlewareFromOptions = options => {
-  const result = [thunkMiddleware, vanillaPromise, writeState];
-  if (NODE_ENV === 'production') result.push(loggerMiddleware);
-  if (options && options.profiler) result.push(profilerMiddleware);
+  const isProfiler = options && options.profiler;
+  const isProduction = NODE_ENV === 'production';
+
+  const result = [];
+  if (isProfiler) result.push(profilerMiddleware);
+  result.push(thunkMiddleware);
+  result.push(vanillaPromise);
+  if (!isProfiler) result.push(writeState);
+  if (!isProduction) result.push(loggerMiddleware);
+
   return result;
 };
 
