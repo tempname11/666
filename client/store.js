@@ -14,6 +14,14 @@ const loggerMiddleware = createLogger({
     action.type !== 'SEARCH_INPUT_CHANGE',
 });
 
+// ignores normal actions
+const profilerMiddleware = () => next => action => {
+  if (action.profiler ||
+      action.type === '@@reduxReactRouter/replaceRoutes') {
+    return next(action);
+  }
+};
+
 /**
  * Lets you dispatch promises in addition to actions.
  * If the promise is resolved, its result will be dispatched as an action.
@@ -28,12 +36,15 @@ const vanillaPromise = store => next => action => {
   return action;
 };
 
-let middleware = [thunkMiddleware, vanillaPromise, writeState];
-middleware = NODE_ENV === 'production' ? middleware :
-              middleware.concat(loggerMiddleware);
+const middlewareFromOptions = options => {
+  const result = [thunkMiddleware, vanillaPromise, writeState];
+  if (NODE_ENV === 'production') result.push(loggerMiddleware);
+  if (options && options.profiler) result.push(profilerMiddleware);
+  return result;
+};
 
-export default compose(
-  applyMiddleware(...middleware),
+export default options => compose(
+  applyMiddleware(...middlewareFromOptions(options)),
   reduxReactRouter({ createHistory })
 )(createStore);
 

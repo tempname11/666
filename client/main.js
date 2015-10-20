@@ -1,7 +1,7 @@
 import ReactDOM from 'react-dom';
 
 import { readState } from './storage';
-import createStorePlus from './store';
+import createStoreWithOptions from './store';
 import all from './reducers';
 import { updateTopRooms, newMessage, newAttachment,
          joinUser, leaveUser } from 'actions';
@@ -9,7 +9,7 @@ import { restoreState } from './smartActions';
 import * as transport from './transport';
 import rootFromStore from './root';
 
-const store = createStorePlus(all);
+const store = createStoreWithOptions()(all);
 const lastState = readState();
 const root = rootFromStore(store);
 const rootElement = document.getElementById('content');
