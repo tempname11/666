@@ -5,7 +5,7 @@ import all from './reducers';
 import createStoreWithOptions from './store';
 import rootFromStore from './root';
 
-import { state, actions } from './profile-case-2';
+const { state, actions } = require('./profile-scenarios/message-input-heavy');
 
 const START_DELAY = 2000;
 const DISPATCH_DELAY = 1000;

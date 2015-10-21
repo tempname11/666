@@ -1,4 +1,4 @@
-import { roomInputChange } from './actions';
+import { roomInputChange } from '../actions';
 
 export const actions = [
   roomInputChange('Hello.'),
