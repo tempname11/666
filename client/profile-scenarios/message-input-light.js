@@ -1,5 +1,8 @@
 import { roomInputChange } from '../actions';
 
+export const delay1 = 1000;
+export const delay2 = 1000;
+
 export const actions = [
   roomInputChange('Hello.'),
 ];
