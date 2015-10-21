@@ -33,8 +33,9 @@ Run dev server:
 npm run dev
 ```
 Run profiler:
+(scenarios are inside `client/profile-scenarios`)
 ```
-DEV_ENTRY='./client/profiler' npm run dev
+PROFILE_SCENARIO="some-scenario" npm run dev
 ```
 Set delay for server replies:
 ```

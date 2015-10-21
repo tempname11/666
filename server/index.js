@@ -20,13 +20,13 @@ mongoose.connect(config.dbHost, (err) => {
 });
 
 // --- STATIC FILE  SERVER
-const entry = process.env.DEV_ENTRY;
+const scenario = process.env.PROFILE_SCENARIO;
 
 if (config.hotReload) {
   // --- DEV HOT RELOAD SERVER
   const webpack = require('webpack');
   const webpackDevServer = require('webpack-dev-server');
-  const webpackDevConfig = require('../config/webpack.dev')(entry);
+  const webpackDevConfig = require('../config/webpack.dev')(scenario);
 
   const fileServer = new webpackDevServer(webpack(webpackDevConfig), {
     publicPath: webpackDevConfig.output.publicPath,

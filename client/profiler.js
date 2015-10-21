@@ -5,7 +5,8 @@ import all from './reducers';
 import createStoreWithOptions from './store';
 import rootFromStore from './root';
 
-const { state, actions } = require('./profile-scenarios/message-input-heavy');
+console.log('profiler: loading "' + PROFILE_SCENARIO + '".');
+const { state, actions } = require('./profile-scenarios/' + PROFILE_SCENARIO);
 
 const START_DELAY = 2000;
 const DISPATCH_DELAY = 1000;

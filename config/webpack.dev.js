@@ -5,13 +5,13 @@ import HtmlWebpackPlugin from 'html-webpack-plugin';
 const root = __dirname.slice(0, -7);
 console.log('Root folder is', root);
 
-export default entry => ({
+export default scenario => ({
   debug: true,
   devtool: 'eval',
   entry: [
     'webpack-dev-server/client',
     'webpack/hot/only-dev-server',
-    entry || './client/main',
+    (scenario && './client/profiler') || './client/main',
   ],
   output: {
     path: path.join(root, 'build/client'),
@@ -57,6 +57,7 @@ export default entry => ({
     new webpack.DefinePlugin({
       NODE_ENV: '"development"',
       SOCKET_PORT: '"3001"',
+      PROFILE_SCENARIO: `'${scenario}'`,
     }),
   ],
 });
