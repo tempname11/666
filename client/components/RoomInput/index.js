@@ -5,7 +5,7 @@ import { sendMessage } from '../../smartActions';
 import { roomInputChange, togglePreview } from '../../actions';
 import './index.scss';
 
-function onKeyPress(e, handler) {
+function wrapKeyPress(e, handler) {
   if (e.which === 13 && !e.shiftKey) {
     e.preventDefault();
     handler();
@@ -17,7 +17,7 @@ function onKeyPress(e, handler) {
   }
 }
 
-function onClick(e, handler) {
+function wrapClick(e, handler) {
   e.preventDefault();
   handler();
 }
@@ -30,23 +30,24 @@ class RoomInput extends Component {
   }
 
   render() {
-    const { dispatch, text, buttonEnabled, previewCollapsed } = this.props;
+    const { text, buttonEnabled, previewCollapsed, changeInputChange,
+            clickTogglePreview, keySendMessage, clickSendMessage } = this.props;
     return (
       <form className="room-actions"
-        onSubmit={e => onClick(e, () => dispatch(sendMessage()))}>
+        onSubmit={clickSendMessage}>
         <textarea
           type="text"
           ref="textarea"
           placeholder="Message..."
           className="room-actions-input input"
-          onChange={e => dispatch(roomInputChange(e.target.value))}
-          onKeyPress={e => onKeyPress(e, () => dispatch(sendMessage()))}
+          onChange={changeInputChange}
+          onKeyPress={keySendMessage}
           rows="1"
           value={text}
         ></textarea>
         <button
           className={`btn ${ previewCollapsed ? 'is-off' : ''}`}
-          onClick={e => onClick(e, () => dispatch(togglePreview()))}
+          onClick={clickTogglePreview}
         > Preview </button>
         <button
           className="room-actions-send btn"
@@ -67,5 +68,12 @@ export default connect(state => {
     buttonEnabled: !!text,
     previewCollapsed,
     text,
+  };
+}, dispatch => {
+  return {
+    clickTogglePreview: e => wrapClick(e, () => dispatch(togglePreview())),
+    keySendMessage: e => wrapKeyPress(e, () => dispatch(sendMessage())),
+    clickSendMessage: e => wrapClick(e, () => dispatch(sendMessage())),
+    changeInputChange: e => dispatch(roomInputChange(e.target.value)),
   };
 })(RoomInput);
