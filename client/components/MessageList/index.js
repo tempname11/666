@@ -1,9 +1,11 @@
-import React, { Component } from 'react';
+import React from 'react';
+import PureRenderMixin from 'react-addons-pure-render-mixin';
 import Message from '../Message';
 import './index.scss';
 
-export default class MessageList extends Component {
-  render() {
+export default React.createClass({
+  mixins: [PureRenderMixin],
+  render: function() {
     const { messages } = this.props;
     return (
       <ul className="messages">
@@ -15,6 +17,6 @@ export default class MessageList extends Component {
         )}
       </ul>
     );
-  }
-}
+  },
+});
 
