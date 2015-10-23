@@ -3,6 +3,10 @@ import { roomInputChange } from '../actions';
 export const delay1 = 5000;
 export const delay2 = 2000;
 
+export const preActions = [
+  roomInputChange('Not empty.'),
+];
+
 export const actions = [
   roomInputChange('Hello.'),
 ];
