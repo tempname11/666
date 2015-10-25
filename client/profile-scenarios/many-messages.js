@@ -2,7 +2,9 @@ import _ from 'lodash';
 import { baseActions, roomID } from './base';
 import { newMessage } from '../actions';
 
-const N = 100;
+const N = 1000;
+const M = 3;
+
 const manyMessages = _.range(N).map(i =>
   newMessage({
     roomID,
@@ -32,6 +34,4 @@ const makeHorse = i =>
     time: 1000007000000 + i,
   });
 
-export const actions = [
-  makeHorse(0),
-];
+export const actions = _.range(M).map(i => makeHorse(i));
