@@ -1,6 +1,7 @@
 import { combineReducers } from 'redux';
 import * as actions from 'actions';
 import { routerStateReducer } from 'redux-router';
+import { List, Map } from 'immutable';
 
 /*
   topRooms: [{
@@ -21,21 +22,15 @@ function joinUser(room, action) {
   const {userID} = action;
   return {
     ...room,
-    roomUsers: {
-      ...room.roomUsers,
-      [userID]: action.user,
-    },
+    users: room.users.set(userID, action.user),
   };
 }
 
 function leaveUser(room, action) {
   const {userID} = action;
-  const users = room.roomUsers;
-  const newUsers = Object.assign({}, users);
-  delete newUsers[userID];
   return {
     ...room,
-    roomUsers: newUsers,
+    users: room.users.delete(userID),
   };
 }
 
@@ -49,25 +44,19 @@ function newMessage(room, action) {
   return {
     ...room,
     // TODO: insert at correct time, not last in list.
-    orderedMessages: [
-      ...room.orderedMessages,
-      messageID, // ! appended to the end.
-    ],
-    roomMessages: {
-      ...room.roomMessages,
-      [messageID]: {
-        ...message,
-        attachments: [], // TODO may by get it from server??
-        status: 'confirmed',
-        index: room.orderedMessages.length, // ! appended to the end.
-      },
-    },
+    messageOrder: room.messageOrder.push(messageID), // ! appended to the end.
+    messages: room.messages.set(messageID, {
+      ...message,
+      attachments: [], // TODO may by get it from server??
+      status: 'confirmed',
+      index: room.messageOrder.size, // ! appended to the end.
+    }),
   };
 }
 
 function newAttachment(room, action) {
   const { messageID, meta, index, url } = action;
-  const message = room.roomMessages[messageID];
+  const message = room.messages.get(messageID);
   if (!message) {
     // TODO handle situation;
     console.log('newAttachment could not find the messageID: `${messageID}`');
@@ -75,16 +64,13 @@ function newAttachment(room, action) {
   const { attachments } = message;
   return {
     ...room,
-    roomMessages: {
-      ...room.roomMessages,
-      [messageID]: {
-        ...message,
-        attachments: [
-          ...attachments,
-          { meta, index, url },
-        ],
-      },
-    },
+    messages: room.messages.set(messageID, {
+      ...message,
+      attachments: [
+        ...attachments,
+        { meta, index, url },
+      ],
+    }),
   };
 }
 
@@ -101,67 +87,44 @@ function sentMessage(room, action) {
   };
   return {
     ...room,
-    orderedMessages: [
-      ...room.orderedMessages,
-      messageID, // ! appended to the end.
-    ],
-    roomMessages: {
-      ...room.roomMessages,
-      [messageID]: {
-        ...message,
-        status: 'sent',
-        index: room.orderedMessages.length, // ! appended to the end.
-      },
-    },
+    messageOrder: room.messageOrder.push(messageID),
+    messages: room.messages.set(messageID, {
+      ...message,
+      status: 'sent',
+      index: room.messageOrder.length, // ! appended to the end.
+    }),
   };
 }
 
 function confirmSentMessage(room, action) {
   const { pendingID, messageID, text } = action;
-  const { roomMessages, orderedMessages } = room;
-  const { index } = roomMessages[pendingID];
 
-  // TODO переписать покрасивее (без мутирования промежуточных значений?)
-
-  const newRoomMessages = (() => {
-    const tmp = Object.assign({}, roomMessages);
-    tmp[messageID] = {
-      ...tmp[pendingID],
-      status: 'confirmed',
-      text,
-      messageID,
-    };
-    delete tmp[pendingID];
-    return tmp;
-  })();
-
-  const newOrderedMessages = (() => {
-    const tmp = [ ...orderedMessages ];
-    tmp[index] = messageID;
-    return tmp;
-  })();
+  const oldMessage = room.messages.get(pendingID);
+  const index = oldMessage.index;
+  const updatedMessage = {
+    ...oldMessage,
+    status: 'confirmed',
+    text,
+    messageID,
+  };
 
   return {
     ...room,
-    roomMessages: newRoomMessages,
-    orderedMessages: newOrderedMessages,
+    messages: room.messages.delete(pendingID).set(messageID, updatedMessage),
+    messageOrder: room.messageOrder.set(index, messageID),
   };
 }
 
 function rejectSentMessage(room, action) {
   const { pendingID } = action;
-  const { roomMessages } = room;
-  const message = roomMessages[pendingID];
+  const message = room.messages.get(pendingID);
 
   return {
     ...room,
-    roomMessages: {
-      ...roomMessages,
-      [pendingID]: {
-        ...message,
-        status: 'rejected',
-      },
-    },
+    messages: room.messages.set(pendingID, {
+      ...message,
+      status: 'rejected',
+    }),
   };
 }
 
@@ -170,11 +133,11 @@ function rejectSentMessage(room, action) {
     userID: string,
     secret: string,
     roomName: string,
-    roomUsers: HashMap('userID', {
+    users: Immutable.Map('userID', {
       avatar: string,
       nick: string,
     }),
-    roomMessages: HashMap('messageID', {
+    messages: Immutable.Map('messageID', {
       userID: string,
       messageID: string,
       text: string,
@@ -183,7 +146,7 @@ function rejectSentMessage(room, action) {
       attachments: [Attachment],
       status: 'sent' | 'confirmed' | 'rejected',
     })],
-    orderedMessages: ['messageID'],
+    messageOrder: Immutable.List('messageID'),
   });
 */
 function joinedRooms(state = {}, action) {
@@ -226,8 +189,8 @@ function joinedRooms(state = {}, action) {
       const { roomID } = room;
       const { userID, secret } = identity;
       const roomName = room.name;
-      const roomUsers = room.users
-        .reduce( (result, {userID: key, avatar, nick} ) => {
+      const users = Map(
+        room.users.reduce( (result, {userID: key, avatar, nick} ) => {
           return {
             ...result,
             [key]: {
@@ -235,10 +198,11 @@ function joinedRooms(state = {}, action) {
               nick,
             },
           };
-        }, {});
-      const orderedMessages = room.messages.map(({messageID}) => messageID);
-      const roomMessages = room.messages
-        .reduce(
+        }, {})
+      );
+      const messageOrder = List(room.messages.map(({messageID}) => messageID));
+      const messages = Map(
+        room.messages.reduce(
           ({result, index}, {userID: thatUserID, messageID, text, time}) =>
             ({
               result: {
@@ -256,7 +220,8 @@ function joinedRooms(state = {}, action) {
               index: index + 1,
             }),
           {index: 0, result: {}}
-        ).result;
+        ).result
+      );
 
       return {
         ...state,
@@ -264,9 +229,9 @@ function joinedRooms(state = {}, action) {
           userID,
           secret,
           roomName,
-          roomUsers,
-          roomMessages,
-          orderedMessages,
+          users,
+          messages,
+          messageOrder,
         },
       };
     }

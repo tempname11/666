@@ -12,7 +12,7 @@ export default React.createClass({
         {messages.map(message =>
           <Message
             message={message}
-            user={users[message.userID]}
+            user={users.get(message.userID)}
             isOurMessage={ourUserID === message.userID}
             key={message.messageID}
           />

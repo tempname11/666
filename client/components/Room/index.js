@@ -18,7 +18,7 @@ class Room extends Component {
       showPreview,
     } = this.props;
 
-    const ourUser = users[ourUserID];
+    const ourUser = users.get(ourUserID);
 
     return (
       <div className="room">
@@ -39,14 +39,14 @@ class Room extends Component {
 }
 
 const selectMessages = createSelector(
-  (state, props) => props.room.orderedMessages,
-  (state, props) => props.room.roomMessages,
-  (orderedMessages, roomMessages) =>
-    orderedMessages.map(messageID => roomMessages[messageID])
+  (state, props) => props.room.messageOrder,
+  (state, props) => props.room.messages,
+  (messageOrder, messages) =>
+    messageOrder.map(messageID => messages.get(messageID))
 );
 
 const getRoom = (state, props) => props.room;
-const getUsers = (state, props) => props.room.roomUsers;
+const getUsers = (state, props) => props.room.users;
 const getOurUserID = (state, props) => props.room.userID;
 const getInputText = state => state.ui.roomInputText;
 const getPreviewCollapsed = state => state.ui.previewCollapsed;
@@ -71,7 +71,8 @@ const selector = createSelector(
   getInputText,
   getPreviewCollapsed,
   selectPreviewMessage,
-  (room, messages, users, ourUserID, inputText, previewCollapsed, previewMessage) => {
+  (room, messages, users, ourUserID,
+   inputText, previewCollapsed, previewMessage) => {
     return {
       room,
       messages,
