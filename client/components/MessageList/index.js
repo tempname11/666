@@ -6,13 +6,15 @@ import './index.scss';
 export default React.createClass({
   mixins: [PureRenderMixin],
   render: function() {
-    const { messages } = this.props;
+    const { messages, users, ourUserID } = this.props;
     return (
       <ul className="messages">
-        {messages.map((message, index) =>
+        {messages.map(message =>
           <Message
             message={message}
-            key={index}
+            user={users[message.userID]}
+            isOurMessage={ourUserID === message.userID}
+            key={message.messageID}
           />
         )}
       </ul>

@@ -9,7 +9,16 @@ import './index.scss';
 
 class Room extends Component {
   render() {
-    const { previewMessage, messages, showPreview, room } = this.props;
+    const {
+      room,
+      messages,
+      users,
+      ourUserID,
+      previewMessage,
+      showPreview,
+    } = this.props;
+
+    const ourUser = users[ourUserID];
 
     return (
       <div className="room">
@@ -17,10 +26,11 @@ class Room extends Component {
         <div className="room-messages" id="roomMessages">
           {!showPreview ? false :
             <div className="room-messages-preview">
-              <Message message={previewMessage} />
+              <Message message={previewMessage}
+                       user={ourUser} isOurMessage={false} />
             </div>
           }
-          <MessageList messages={messages} />
+          <MessageList messages={messages} users={users} ourUserID={ourUserID} />
         </div>
         <RoomInput />
       </div>
@@ -28,48 +38,25 @@ class Room extends Component {
   }
 }
 
+const selectMessages = createSelector(
+  (state, props) => props.room.orderedMessages,
+  (state, props) => props.room.roomMessages,
+  (orderedMessages, roomMessages) =>
+    orderedMessages.map(messageID => roomMessages[messageID])
+);
+
 const getRoom = (state, props) => props.room;
+const getUsers = (state, props) => props.room.roomUsers;
+const getOurUserID = (state, props) => props.room.userID;
 const getInputText = state => state.ui.roomInputText;
 const getPreviewCollapsed = state => state.ui.previewCollapsed;
 
-const selectMessages = createSelector(
-  getRoom,
-  room => {
-    const { orderedMessages, roomMessages, roomUsers, userID: ourUserID } = room;
-
-    return orderedMessages.map(messageID => {
-      const { text, time, userID,
-              status, attachments } = roomMessages[messageID];
-      const { nick, avatar } = roomUsers[userID] ? roomUsers[userID] : {
-        nick: 'Leaved user',
-        avatar: '', // TODO link to our logo with anonym man
-      };
-
-      const isOurMessage = (ourUserID === userID);
-
-      return {
-        text,
-        time,
-        nick,
-        isOurMessage,
-        avatar,
-        status,
-        attachments,
-      };
-    });
-  }
-);
-
 const selectPreviewMessage = createSelector(
-  getRoom,
   getInputText,
-  (room, inputText) => {
-    const {nick: ourNick, avatar: ourAvatar} = room.roomUsers[room.userID];
+  inputText => {
     return {
       text: inputText,
       time: null,
-      nick: ourNick,
-      avatar: ourAvatar,
       status: 'preview',
       attachments: [],
     };
@@ -79,14 +66,19 @@ const selectPreviewMessage = createSelector(
 const selector = createSelector(
   getRoom,
   selectMessages,
+  getUsers,
+  getOurUserID,
   getInputText,
   getPreviewCollapsed,
   selectPreviewMessage,
-  (room, messages, inputText, previewCollapsed, previewMessage) => {
+  (room, messages, users, ourUserID, inputText, previewCollapsed, previewMessage) => {
     return {
-      showPreview: !!inputText && !previewCollapsed,
+      room,
       messages,
+      users,
+      ourUserID,
       previewMessage,
+      showPreview: !!inputText && !previewCollapsed,
     };
   }
 );

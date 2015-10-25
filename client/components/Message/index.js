@@ -1,11 +1,17 @@
 import React, { Component } from 'react';
+import PureRenderMixin from 'react-addons-pure-render-mixin';
 import MessageBody from '../MessageBody';
 import './index.scss';
 import OpenGraph from '../OpenGraph';
 
-export default class Message extends Component {
-  render() {
-    const { attachments, time, nick, avatar, text, status, isOurMessage } = this.props.message;
+const disconnectedUser = { nick: 'Disconnected User', avatar: ''};
+
+export default React.createClass({
+  mixins: [PureRenderMixin],
+  render: function() {
+    const { attachments, time, text, status } = this.props.message;
+    const { nick, avatar } = this.props.user || disconnectedUser;
+    const { isOurMessage } = this.props;
     const date = new Date(time);
     const hours = ('00' + String(date.getHours())).slice(-2);
     const minutes = ('00' + String(date.getMinutes())).slice(-2);
@@ -38,6 +44,6 @@ export default class Message extends Component {
         </div>
       </li>
     );
-  }
-}
+  },
+});
 
