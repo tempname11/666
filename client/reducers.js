@@ -180,6 +180,7 @@ function rejectSentMessage(room, action) {
       text: string,
       time: number,
       index: number,
+      attachments: [Attachment],
       status: 'sent' | 'confirmed' | 'rejected',
     })],
     orderedMessages: ['messageID'],
