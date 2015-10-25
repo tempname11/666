@@ -35,12 +35,13 @@ const getPreviewCollapsed = state => state.ui.previewCollapsed;
 const selectMessages = createSelector(
   getRoom,
   room => {
-    const { orderedMessages, roomMessages, roomUsers, userID: ourUserID } = room;
+    const { messageOrder, messages, users, userID: ourUserID } = room;
 
-    return orderedMessages.map(messageID => {
+    return messageOrder.map(messageID => {
       const { text, time, userID,
-              status, attachments } = roomMessages[messageID];
-      const { nick, avatar } = roomUsers[userID] ? roomUsers[userID] : {
+              status, attachments } = messages.get(messageID);
+      const user = users.get(userID);
+      const { nick, avatar } = user ? user : {
         nick: 'Leaved user',
         avatar: '', // TODO link to our logo with anonym man
       };
@@ -64,7 +65,7 @@ const selectPreviewMessage = createSelector(
   getRoom,
   getInputText,
   (room, inputText) => {
-    const {nick: ourNick, avatar: ourAvatar} = room.roomUsers[room.userID];
+    const {nick: ourNick, avatar: ourAvatar} = room.users.get(room.userID);
     return {
       text: inputText,
       time: null,
