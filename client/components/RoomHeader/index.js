@@ -1,13 +1,13 @@
 import { connect } from 'react-redux';
 import { toggleNavigation } from '../../actions';
-import React, { Component } from 'react';
+import React from 'react';
+import PureRenderMixin from 'react-addons-pure-render-mixin';
 import './index.scss';
 
-class RoomHeader extends Component {
-  render() {
-    const { dispatch, navigationCollapsed, room } = this.props;
-    const { roomName } = room;
-    const { nick, avatar } = room.roomUsers[room.userID] || {}; // TODO fix it
+const RoomHeader = React.createClass({
+  mixins: [PureRenderMixin],
+  render: function() {
+    const { dispatch, navigationCollapsed, roomName, nick, avatar } = this.props;
 
     return (
       <header className="room-header">
@@ -39,8 +39,8 @@ class RoomHeader extends Component {
           </ul>
       </header>
     );
-  }
-}
+  },
+});
 
 export default connect(state => {
   const { navigationCollapsed } = state.ui;

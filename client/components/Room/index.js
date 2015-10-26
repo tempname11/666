@@ -22,7 +22,8 @@ class Room extends Component {
 
     return (
       <div className="room">
-        <RoomHeader room={room} />
+        <RoomHeader roomName={room.roomName}
+                    nick={ourUser.nick} avatar={ourUser.avatar} />
         <div className="room-messages" id="roomMessages">
           {!showPreview ? false :
             <div className="room-messages-preview">
