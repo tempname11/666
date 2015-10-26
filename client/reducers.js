@@ -1,6 +1,7 @@
 import { combineReducers } from 'redux';
 import * as actions from 'actions';
 import { routerStateReducer } from 'redux-router';
+import * as ChunkTree from '../common/ChunkTree';
 
 /*
   topRooms: [{
@@ -43,125 +44,135 @@ function newMessage(room, action) {
   const { message } = action;
   const userID = action.message.userID;
   const { messageID } = message;
+
   if (room.userID === userID) { // ignore our message
     return room;
   }
+
+  const finalMessage = {
+    ...message,
+    attachments: [], // TODO may by get it from server??
+    status: 'confirmed',
+  };
+
+  // TODO: insert at correct time, not last in list.
+  const {tree: newMessageTree, path} =
+    ChunkTree.append(room.messageTree, finalMessage);
+
+  const newMessagePaths = {
+    ...room.messagePaths,
+    [messageID]: path,
+  };
+
   return {
     ...room,
-    // TODO: insert at correct time, not last in list.
-    orderedMessages: [
-      ...room.orderedMessages,
-      messageID, // ! appended to the end.
-    ],
-    roomMessages: {
-      ...room.roomMessages,
-      [messageID]: {
-        ...message,
-        attachments: [], // TODO may by get it from server??
-        status: 'confirmed',
-        index: room.orderedMessages.length, // ! appended to the end.
-      },
-    },
+    messageTree: newMessageTree,
+    messagePaths: newMessagePaths,
   };
 }
 
 function newAttachment(room, action) {
   const { messageID, meta, index, url } = action;
-  const message = room.roomMessages[messageID];
+  const path = room.messagePaths[messageID];
+  const message = ChunkTree.get(room.messageTree, path);
   if (!message) {
     // TODO handle situation;
     console.log('newAttachment could not find the messageID: `${messageID}`');
   }
   const { attachments } = message;
+
+  const updatedMessage = {
+    ...message,
+    attachments: [
+      ...attachments,
+      { meta, index, url },
+    ],
+  };
+
+  const newMessageTree = ChunkTree.replace(room.messageTree, path, updatedMessage);
+
   return {
     ...room,
-    roomMessages: {
-      ...room.roomMessages,
-      [messageID]: {
-        ...message,
-        attachments: [
-          ...attachments,
-          { meta, index, url },
-        ],
-      },
-    },
+    messageTree: newMessageTree,
   };
 }
 
 function sentMessage(room, action) {
   const { text, time, pendingID } = action;
   const { userID } = room;
-  const messageID = pendingID;
-  const message = {
+  const finalMessage = {
     userID,
-    messageID,
+    messageID: pendingID,
     text,
     time,
     attachments: [],
+    status: 'sent',
   };
+
+  // TODO: insert at correct time, not last in list.
+  const {tree: newMessageTree, path} =
+    ChunkTree.append(room.messageTree, finalMessage);
+
+  const newMessagePaths = {
+    ...room.messagePaths,
+    [pendingID]: path,
+  };
+
   return {
     ...room,
-    orderedMessages: [
-      ...room.orderedMessages,
-      messageID, // ! appended to the end.
-    ],
-    roomMessages: {
-      ...room.roomMessages,
-      [messageID]: {
-        ...message,
-        status: 'sent',
-        index: room.orderedMessages.length, // ! appended to the end.
-      },
-    },
+    messageTree: newMessageTree,
+    messagePaths: newMessagePaths,
   };
 }
 
 function confirmSentMessage(room, action) {
   const { pendingID, messageID, text } = action;
-  const { roomMessages, orderedMessages } = room;
-  const { index } = roomMessages[pendingID];
 
-  // TODO переписать покрасивее (без мутирования промежуточных значений?)
+  const path = room.messagePaths[pendingID];
+  const message = ChunkTree.get(room.messageTree, path);
 
-  const newRoomMessages = (() => {
-    const tmp = Object.assign({}, roomMessages);
-    tmp[messageID] = {
-      ...tmp[pendingID],
-      status: 'confirmed',
-      text,
-      messageID,
+  // Important: we have changed the messageID here.
+  const updatedMessage = {
+    ...message,
+    status: 'confirmed',
+    text,
+    messageID,
+  };
+
+  const newMessageTree = ChunkTree.replace(room.messageTree, path, updatedMessage);
+
+  const newMessagePaths = (() => {
+    const t = {
+      ...room.messagePaths,
+      [messageID]: path,
     };
-    delete tmp[pendingID];
-    return tmp;
-  })();
-
-  const newOrderedMessages = (() => {
-    const tmp = [ ...orderedMessages ];
-    tmp[index] = messageID;
-    return tmp;
+    delete t[pendingID];
+    return t;
   })();
 
   return {
     ...room,
-    roomMessages: newRoomMessages,
-    orderedMessages: newOrderedMessages,
+    messageTree: newMessageTree,
+    messagePaths: newMessagePaths,
   };
 }
 
 function rejectSentMessage(room, action) {
   const { pendingID } = action;
-  const { roomMessages } = room;
-  const message = roomMessages[pendingID];
+
+  const path = room.messagePaths[pendingID];
+  const message = ChunkTree.get(room.messageTree, path);
+
+  const updatedMessage = {
+    ...message,
+    status: 'rejected',
+  };
+
+  const newMessageTree = ChunkTree.replace(room.messageTree, path, updatedMessage);
 
   return {
     ...room,
-    roomMessages: {
-      ...roomMessages,
-      [pendingID]: {
-        ...message,
-        status: 'rejected',
-      },
-    },
+    messageTree: newMessageTree,
   };
 }
 
@@ -174,16 +185,15 @@ function rejectSentMessage(room, action) {
       avatar: string,
       nick: string,
     }),
-    roomMessages: HashMap('messageID', {
+    messageTree: ChunkTree({
       userID: string,
       messageID: string,
       text: string,
       time: number,
-      index: number,
       attachments: [Attachment],
       status: 'sent' | 'confirmed' | 'rejected',
-    })],
-    orderedMessages: ['messageID'],
+    }),
+    messagePaths: HashMap('messageID', ChunkTree.Path),
   });
 */
 function joinedRooms(state = {}, action) {
@@ -222,41 +232,35 @@ function joinedRooms(state = {}, action) {
       return newState;
     }
     case actions.CONFIRM_JOIN_ROOM: {
-      const { room, identity } = action;
-      const { roomID } = room;
-      const { userID, secret } = identity;
-      const roomName = room.name;
-      const roomUsers = room.users
-        .reduce( (result, {userID: key, avatar, nick} ) => {
-          return {
-            ...result,
-            [key]: {
-              avatar,
-              nick,
-            },
-          };
-        }, {});
-      const orderedMessages = room.messages.map(({messageID}) => messageID);
-      const roomMessages = room.messages
-        .reduce(
-          ({result, index}, {userID: thatUserID, messageID, text, time}) =>
-            ({
-              result: {
-                ...result,
-                [messageID]: {
-                  messageID,
-                  userID: thatUserID,
-                  text,
-                  time,
-                  status: 'confirmed',
-                  index,
-                  attachments: [],
-                },
-              },
-              index: index + 1,
-            }),
-          {index: 0, result: {}}
-        ).result;
+      const { roomID, messages, name: roomName } = action.room;
+      const { userID, secret } = action.identity;
+
+      const roomUsers = action.room.users.reduce(
+        (result, {userID: key, avatar, nick}) => ({
+          ...result,
+          [key]: {
+            avatar,
+            nick,
+          },
+        }), {});
+
+      const { tree: messageTree, paths: messagePaths } =
+        messages.reduce(
+          ({tree, paths}, {userID: thatUserID, messageID, text, time}) => {
+            const message = {
+              messageID,
+              userID: thatUserID,
+              text,
+              time,
+              status: 'confirmed',
+              attachments: [],
+            };
+            const {tree: newTree, path} = ChunkTree.append(tree, message);
+            const newPaths = { ...paths, [messageID]: path };
+            return {tree: newTree, paths: newPaths};
+          },
+          {tree: ChunkTree.create(), paths: {}}
+        );
 
       return {
         ...state,
@@ -265,8 +269,8 @@ function joinedRooms(state = {}, action) {
           secret,
           roomName,
           roomUsers,
-          roomMessages,
-          orderedMessages,
+          messageTree,
+          messagePaths,
         },
       };
     }
