@@ -1,6 +1,7 @@
 import { combineReducers } from 'redux';
 import * as actions from 'actions';
 import { routerStateReducer } from 'redux-router';
+import * as ChunkList from '../common/ChunkList';
 
 /*
   topRooms: [{
@@ -41,127 +42,138 @@ function leaveUser(room, action) {
 
 function newMessage(room, action) {
   const { message } = action;
-  const userID = action.message.userID;
   const { messageID } = message;
-  if (room.userID === userID) { // ignore our message
+
+  if (room.userID === message.userID) { // ignore our message
     return room;
   }
+
+  const finalMessage = {
+    ...message,
+    attachments: [], // TODO may by get it from server??
+    status: 'confirmed',
+  };
+
+  const {list: newMessageChunks, path} =
+    ChunkList.append(room.messageChunks, finalMessage);
+
+  const newMessagePaths = {
+    ...room.messagePaths,
+    [messageID]: path,
+  };
+
   return {
     ...room,
     // TODO: insert at correct time, not last in list.
-    orderedMessages: [
-      ...room.orderedMessages,
-      messageID, // ! appended to the end.
-    ],
-    roomMessages: {
-      ...room.roomMessages,
-      [messageID]: {
-        ...message,
-        attachments: [], // TODO may by get it from server??
-        status: 'confirmed',
-        index: room.orderedMessages.length, // ! appended to the end.
-      },
-    },
+    messageChunks: newMessageChunks,
+    messagePaths: newMessagePaths,
   };
 }
 
 function newAttachment(room, action) {
   const { messageID, meta, index, url } = action;
-  const message = room.roomMessages[messageID];
+  const path = room.messagePaths[messageID];
+  const message = ChunkList.get(room.messageChunks, path);
+
   if (!message) {
     // TODO handle situation;
     console.log('newAttachment could not find the messageID: `${messageID}`');
   }
-  const { attachments } = message;
+
+  const finalMessage = {
+    ...message,
+    attachments: [
+      ...message.attachments,
+      { meta, index, url },
+    ],
+  };
+
+  const newMessageChunks =
+    ChunkList.replace(room.messageChunks, path, finalMessage);
+
   return {
     ...room,
-    roomMessages: {
-      ...room.roomMessages,
-      [messageID]: {
-        ...message,
-        attachments: [
-          ...attachments,
-          { meta, index, url },
-        ],
-      },
-    },
+    messageChunks: newMessageChunks,
   };
 }
 
 function sentMessage(room, action) {
   const { text, time, pendingID } = action;
   const { userID } = room;
-  const messageID = pendingID;
-  const message = {
+  const finalMessage = {
     userID,
-    messageID,
+    messageID: pendingID,
     text,
     time,
     attachments: [],
+    status: 'sent',
   };
+
+  const {list: newMessageChunks, path} =
+    ChunkList.append(room.messageChunks, finalMessage);
+
+  const newMessagePaths = {
+    ...room.messagePaths,
+    [pendingID]: path,
+  };
+
   return {
     ...room,
-    orderedMessages: [
-      ...room.orderedMessages,
-      messageID, // ! appended to the end.
-    ],
-    roomMessages: {
-      ...room.roomMessages,
-      [messageID]: {
-        ...message,
-        status: 'sent',
-        index: room.orderedMessages.length, // ! appended to the end.
-      },
-    },
+    // TODO: insert at correct time, not last in list.
+    messageChunks: newMessageChunks,
+    messagePaths: newMessagePaths,
   };
 }
 
 function confirmSentMessage(room, action) {
   const { pendingID, messageID, text } = action;
-  const { roomMessages, orderedMessages } = room;
-  const { index } = roomMessages[pendingID];
 
-  // TODO переписать покрасивее (без мутирования промежуточных значений?)
+  const path = room.messagePaths[pendingID];
+  const message = ChunkList.get(room.messageChunks, path);
 
-  const newRoomMessages = (() => {
-    const tmp = Object.assign({}, roomMessages);
-    tmp[messageID] = {
-      ...tmp[pendingID],
-      status: 'confirmed',
-      text,
-      messageID,
-    };
+  // Important: we modify the messageID here!
+  const finalMessage = {
+    ...message,
+    status: 'confirmed',
+    text,
+    messageID,
+  };
+
+  const newMessageChunks =
+    ChunkList.replace(room.messageChunks, path, finalMessage);
+
+  const newMessagePaths = (() => {
+    const tmp = { ...room.messagePaths };
+    tmp[messageID] = path;
     delete tmp[pendingID];
-    return tmp;
-  })();
-
-  const newOrderedMessages = (() => {
-    const tmp = [ ...orderedMessages ];
-    tmp[index] = messageID;
     return tmp;
   })();
 
   return {
     ...room,
-    roomMessages: newRoomMessages,
-    orderedMessages: newOrderedMessages,
+    messageChunks: newMessageChunks,
+    messagePaths: newMessagePaths,
   };
 }
 
 function rejectSentMessage(room, action) {
   const { pendingID } = action;
-  const { roomMessages } = room;
-  const message = roomMessages[pendingID];
+
+  const path = room.messagePaths[pendingID];
+  const message = ChunkList.get(room.messageChunks, path);
+
+  // Important: we modify the messageID here!
+  const finalMessage = {
+    ...message,
+    status: 'rejected',
+  };
+
+  const newMessageChunks =
+    ChunkList.replace(room.messageChunks, path, finalMessage);
 
   return {
     ...room,
-    roomMessages: {
-      ...roomMessages,
-      [pendingID]: {
-        ...message,
-        status: 'rejected',
-      },
-    },
+    messageChunks: newMessageChunks,
   };
 }
 
@@ -174,16 +186,15 @@ function rejectSentMessage(room, action) {
       avatar: string,
       nick: string,
     }),
-    roomMessages: HashMap('messageID', {
+    messageChunks: ChunkList({
       userID: string,
       messageID: string,
       text: string,
       time: number,
-      index: number,
       attachments: [Attachment],
       status: 'sent' | 'confirmed' | 'rejected',
     })],
-    orderedMessages: ['messageID'],
+    messagePaths: HashMap('messageID', ChunkList.Path),
   });
 */
 function joinedRooms(state = {}, action) {
@@ -236,27 +247,24 @@ function joinedRooms(state = {}, action) {
             },
           };
         }, {});
-      const orderedMessages = room.messages.map(({messageID}) => messageID);
-      const roomMessages = room.messages
-        .reduce(
-          ({result, index}, {userID: thatUserID, messageID, text, time}) =>
-            ({
-              result: {
-                ...result,
-                [messageID]: {
-                  messageID,
-                  userID: thatUserID,
-                  text,
-                  time,
-                  status: 'confirmed',
-                  index,
-                  attachments: [],
-                },
-              },
-              index: index + 1,
-            }),
-          {index: 0, result: {}}
-        ).result;
+
+      const messages = action.room.messages.map(
+        ({userID: thatUserID, messageID, text, time}) => ({
+          messageID,
+          userID: thatUserID,
+          text,
+          time,
+          status: 'confirmed',
+          attachments: [],
+        })
+      );
+
+      const {list: messageChunks, paths} = ChunkList.create(messages);
+
+      const messagePaths = {};
+      paths.forEach(({element, path}) => {
+        messagePaths[element.messageID] = path;
+      });
 
       return {
         ...state,
@@ -265,8 +273,8 @@ function joinedRooms(state = {}, action) {
           secret,
           roomName,
           roomUsers,
-          roomMessages,
-          orderedMessages,
+          messagePaths,
+          messageChunks,
         },
       };
     }

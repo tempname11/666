@@ -11,7 +11,7 @@ class Room extends Component {
   render() {
     const {
       room,
-      messages,
+      messageChunks,
       users,
       ourUserID,
       previewMessage,
@@ -30,7 +30,8 @@ class Room extends Component {
                        user={ourUser} isOurMessage={false} />
             </div>
           }
-          <MessageList messages={messages} users={users} ourUserID={ourUserID} />
+          <MessageList messageChunks={messageChunks}
+            users={users} ourUserID={ourUserID} />
         </div>
         <RoomInput />
       </div>
@@ -38,13 +39,7 @@ class Room extends Component {
   }
 }
 
-const selectMessages = createSelector(
-  (state, props) => props.room.orderedMessages,
-  (state, props) => props.room.roomMessages,
-  (orderedMessages, roomMessages) =>
-    orderedMessages.map(messageID => roomMessages[messageID])
-);
-
+const getMessageChunks = (state, props) => props.room.messageChunks;
 const getRoom = (state, props) => props.room;
 const getUsers = (state, props) => props.room.roomUsers;
 const getOurUserID = (state, props) => props.room.userID;
@@ -65,16 +60,16 @@ const selectPreviewMessage = createSelector(
 
 const selector = createSelector(
   getRoom,
-  selectMessages,
+  getMessageChunks,
   getUsers,
   getOurUserID,
   getInputText,
   getPreviewCollapsed,
   selectPreviewMessage,
-  (room, messages, users, ourUserID, inputText, previewCollapsed, previewMessage) => {
+  (room, messageChunks, users, ourUserID, inputText, previewCollapsed, previewMessage) => {
     return {
       room,
-      messages,
+      messageChunks,
       users,
       ourUserID,
       previewMessage,
